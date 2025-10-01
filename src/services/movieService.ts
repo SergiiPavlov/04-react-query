@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Movie } from '../types/movie';
+import type { TMDBSearchResponse } from '../types/movie';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TOKEN = import.meta.env.VITE_TMDB_TOKEN as string;
@@ -9,31 +9,27 @@ export interface FetchMoviesParams {
   page?: number;
 }
 
-export interface FetchMoviesResponse {
-  page: number;
-  results: Movie[];
-  total_pages: number;
-  total_results: number;
+
+export function getImageUrl(
+  path: string | null,
+  size: 'w200' | 'w300' | 'w500' | 'original' = 'w300',
+): string | undefined {
+  return path ? `https://image.tmdb.org/t/p/${size}${path}` : undefined;
 }
 
-export function getImageUrl(path: string | null, size: 'w500' | 'original' = 'w500') {
-  if (!path) return '';
-  const base = 'https://image.tmdb.org/t/p/';
-  return `${base}${size}${path}`;
-}
 
-export async function fetchMovies({ query, page = 1 }: FetchMoviesParams): Promise<FetchMoviesResponse> {
+export async function fetchMovies({
+  query,
+  page = 1,
+}: FetchMoviesParams): Promise<TMDBSearchResponse> {
   if (!TOKEN) {
     throw new Error('Missing TMDB token. Put it to .env as VITE_TMDB_TOKEN');
   }
 
-  const config = {
+  const { data } = await axios.get<TMDBSearchResponse>(`${TMDB_BASE}/search/movie`, {
     params: { query, page, include_adult: false, language: 'en-US' },
     headers: { Authorization: `Bearer ${TOKEN}` },
-  };
+  });
 
- 
-  const { data } = await axios.get<FetchMoviesResponse>(`${TMDB_BASE}/search/movie`, config);
   return data;
 }
-
