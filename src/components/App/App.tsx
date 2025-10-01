@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Toaster, toast } from 'react-hot-toast';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './App.module.css';
 
 import SearchBar from '../SearchBar/SearchBar';
@@ -10,39 +9,78 @@ import MovieModal from '../MovieModal/MovieModal';
 
 import type { Movie } from '../../types/movie';
 import { fetchMovies } from '../../services/movieService';
+import ReactPaginate from 'react-paginate';
+import { useQuery } from '@tanstack/react-query';
+import { Toaster, toast } from 'react-hot-toast';
 
 export default function App() {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Movie | null>(null);
 
-  const handleSearch = async (query: string) => {
-    setError(false);
-    setMovies([]);
-    setLoading(true);
-    try {
-      const data = await fetchMovies({ query });
-      if (!data.results.length) {
-        toast.error('No movies found for your request.');
-      }
-      setMovies(data.results);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
+  const isEnabled = query.trim().length > 0;
+
+  const { data, isFetching, isError } = useQuery({
+    queryKey: ['movies', query, page],
+    queryFn: () => fetchMovies({ query, page }),
+    enabled: isEnabled,
+    staleTime: 60_000,
+    retry: 1,
+    throwOnError: false,
+  });
+
+  // показываем тост «ничего не найдено» после успешной загрузки пустого ответа
+  useEffect(() => {
+    if (!isFetching && isEnabled && data && data.results.length === 0) {
+      toast.error('No movies found for your request.');
     }
-  };
+  }, [isFetching, isEnabled, data]);
+
+  const movies = data?.results ?? [];
+  const totalPages = useMemo(() => {
+    const backendTotal = data?.total_pages ?? 0;
+    return Math.min(backendTotal, 500);
+  }, [data?.total_pages]);
+
+  function handleSearch(nextQuery: string) {
+    if (nextQuery === query) return;
+    setQuery(nextQuery);
+    setPage(1);
+    setSelected(null);
+  }
 
   return (
     <>
+      {/* Верхняя панель как в исходнике */}
       <SearchBar onSubmit={handleSearch} />
-      <main className={styles.app}>
-        {loading && <Loader />}
-        {!loading && error && <ErrorMessage />}
-        {!loading && !error && <MovieGrid movies={movies} onSelect={setSelected} />}
+
+      <main>
+        {/* Пагинация СВЕРХУ, как на скриншоте. Рендерится только когда страниц > 1 */}
+        {isEnabled && totalPages > 1 && (
+          <nav aria-label="Pagination" className={styles.paginationTopWrap}>
+            <ReactPaginate
+              pageCount={totalPages}
+              pageRangeDisplayed={5}
+              marginPagesDisplayed={1}
+              onPageChange={({ selected }) => setPage(selected + 1)}
+              forcePage={page - 1}
+              containerClassName={styles.pagination}
+              activeClassName={styles.active}
+              nextLabel="→"
+              previousLabel="←"
+            />
+          </nav>
+        )}
+
+        {isFetching && <Loader />}
+        {!isFetching && isError && <ErrorMessage />}
+        {!isFetching && !isError && (
+          <MovieGrid movies={movies} onSelect={setSelected} />
+        )}
       </main>
+
       <MovieModal movie={selected} onClose={() => setSelected(null)} />
+      {/* Тосты (ничего в вёрстке не ломают) */}
       <Toaster position="top-center" />
     </>
   );

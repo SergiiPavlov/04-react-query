@@ -10,11 +10,13 @@
     "format": "prettier -w ."
   },
   "dependencies": {
+    "@tanstack/react-query": "5.90.2",
     "axios": "^1.7.7",
     "modern-normalize": "^2.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-hot-toast": "^2.4.1"
+    "react-hot-toast": "2.6.0",
+    "react-paginate": "8.3.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.13",
