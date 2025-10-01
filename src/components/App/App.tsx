@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Toaster, toast } from 'react-hot-toast';
 import styles from './App.module.css';
 
 import SearchBar from '../SearchBar/SearchBar';
@@ -10,8 +11,7 @@ import MovieModal from '../MovieModal/MovieModal';
 import type { Movie } from '../../types/movie';
 import { fetchMovies } from '../../services/movieService';
 import ReactPaginate from 'react-paginate';
-import { useQuery } from '@tanstack/react-query';
-import { Toaster, toast } from 'react-hot-toast';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 export default function App() {
   const [query, setQuery] = useState('');
@@ -20,16 +20,15 @@ export default function App() {
 
   const isEnabled = query.trim().length > 0;
 
-  const { data, isFetching, isError } = useQuery({
+  const { data, isFetching, isError, isPending } = useQuery({
     queryKey: ['movies', query, page],
     queryFn: () => fetchMovies({ query, page }),
     enabled: isEnabled,
-    staleTime: 60_000,
+    staleTime: 60000,
     retry: 1,
-    throwOnError: false,
+    placeholderData: keepPreviousData,
   });
 
-  // показываем тост «ничего не найдено» после успешной загрузки пустого ответа
   useEffect(() => {
     if (!isFetching && isEnabled && data && data.results.length === 0) {
       toast.error('No movies found for your request.');
@@ -49,13 +48,13 @@ export default function App() {
     setSelected(null);
   }
 
+  const showLoader = isEnabled && (isFetching || isPending);
+
   return (
     <>
-      {/* Верхняя панель как в исходнике */}
       <SearchBar onSubmit={handleSearch} />
 
-      <main>
-        {/* Пагинация СВЕРХУ, как на скриншоте. Рендерится только когда страниц > 1 */}
+      <main className={styles.app}>
         {isEnabled && totalPages > 1 && (
           <nav aria-label="Pagination" className={styles.paginationTopWrap}>
             <ReactPaginate
@@ -72,15 +71,12 @@ export default function App() {
           </nav>
         )}
 
-        {isFetching && <Loader />}
-        {!isFetching && isError && <ErrorMessage />}
-        {!isFetching && !isError && (
-          <MovieGrid movies={movies} onSelect={setSelected} />
-        )}
+        {showLoader && <Loader />}
+        {!showLoader && isError && <ErrorMessage />}
+        {!showLoader && !isError && <MovieGrid movies={movies} onSelect={setSelected} />}
       </main>
 
       <MovieModal movie={selected} onClose={() => setSelected(null)} />
-      {/* Тосты (ничего в вёрстке не ломают) */}
       <Toaster position="top-center" />
     </>
   );

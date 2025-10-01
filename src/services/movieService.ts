@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { TMDBSearchResponse } from '../types/movie';
+import type { Movie } from '../types/movie';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const TOKEN = import.meta.env.VITE_TMDB_TOKEN as string;
@@ -9,6 +9,12 @@ export interface FetchMoviesParams {
   page?: number;
 }
 
+interface TMDBSearchResponse {
+  page: number;
+  results: Movie[];
+  total_pages: number;
+  total_results: number;
+}
 
 export function getImageUrl(
   path: string | null,
@@ -16,7 +22,6 @@ export function getImageUrl(
 ): string | undefined {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : undefined;
 }
-
 
 export async function fetchMovies({
   query,

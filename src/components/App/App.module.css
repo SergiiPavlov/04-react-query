@@ -1,9 +1,13 @@
-/* Добавляем только стили пагинации. Остальной визуал не трогаем. */
+.app {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 24px;
+}
+
 .paginationTopWrap {
   margin: 16px 0;
 }
 
-/* Готовые стили из ТЗ */
 .pagination {
   display: flex;
   justify-content: center;
